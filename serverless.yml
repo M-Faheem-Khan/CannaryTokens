@@ -1,0 +1,58 @@
+service: cannary-tokens
+frameworkVersion: '2'
+
+plugins:
+  - serverless-python-requirements
+provider:
+  name: aws
+  runtime: python3.8
+  stage: development
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${sls:stage}
+  httpApi:
+    cors: true
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+  create:
+    handler: cannary_tokens/create.lambda_handler
+    events:
+      - httpApi:
+          path: /create
+          method: get
+
+  list:
+    handler: cannary_tokens/listen.lambda_handler
+    events:
+      - httpApi:
+          path: /todos
+          method: get
+
+
+resources:
+  Resources:
+    TodosDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: token
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
